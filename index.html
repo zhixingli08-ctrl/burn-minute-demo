@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>烬账 ASHLEDGER（暂名）· 演示站</title>
+<meta name="description" content="BSC 上的分钟燃烧拍卖 · 前端演示，全部为模拟数据">
+<meta name="theme-color" content="#0b0a08">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%230b0a08%27/%3E%3Ctext x=%2716%27 y=%2724%27 font-size=%2722%27 text-anchor=%27middle%27 fill=%27%23f0b90b%27%3E%E7%83%AC%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;900&family=Big+Shoulders+Display:wght@500;800;900&family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- 顶部账本条 -->
+<header class="rail">
+  <div class="rail-l">
+    <span class="mark">烬<i>账</i></span>
+    <span class="tag">ASHLEDGER · 暂名</span>
+  </div>
+  <div class="rail-m mono" id="railTicker">
+    <span>BSC</span><span>#<b id="rBlock">—</b></span><span>出块 0.45s</span><span>gas <b id="rGas">—</b> gwei</span><span class="demo-pill">演示数据</span>
+  </div>
+  <nav class="rail-r mono">
+    <a href="#s1">01 炉</a><a href="#s2">02 这一分钟</a><a href="#s3">03 税</a><a href="#s4">04 算一下</a><a href="#s5">05 地块</a><a href="#s6">06 地板</a><a href="#s7">07 授权</a>
+    <button class="btn-connect" id="btnConnect">连接钱包</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- §01 炉 -->
+<section class="s-hero" id="s1">
+  <canvas id="furnace" aria-hidden="true"></canvas>
+  <div class="hero-grid">
+    <div class="hero-index mono">§01<br><span>炉膛</span></div>
+    <h1 class="hero-title">
+      <span class="ht-a">烧</span>
+      <span class="ht-b">一分钟<br>结一次账</span>
+    </h1>
+    <div class="hero-clock">
+      <div class="hc-label mono">第 <b id="hMinute">—</b> 分钟 · 名义截止</div>
+      <div class="hc-num"><span id="hSec">00</span><small>.<span id="hMs">00</span></small></div>
+      <div class="hc-bar"><i id="hBar"></i><em class="hc-window" title="随机收盘窗口：最后 15 秒"></em></div>
+      <div class="hc-foot mono"><span>0s</span><span>45s · 随机收盘窗开启</span><span>60s</span></div>
+    </div>
+    <div class="hero-pot">
+      <div class="hp-k mono">本分钟奖池 · 开局已定</div>
+      <div class="hp-v"><span id="hPot">0.0000</span><small>BNB</small></div>
+      <div class="hp-sub mono">= 分钟池余额 <b id="hPool">—</b> × 2% 释放 · 分钟内新进的税算到后面</div>
+    </div>
+    <div class="chain mono" id="chain" aria-hidden="true"></div>
+    <p class="hero-lede">
+      这里只有一个动作：<b>烧</b>。<br>
+      在币安钱包里一笔完成「BNB → 买入 → 烧掉」。每分钟结算一次，按你烧掉的占比，分这一分钟开局就公布的 BNB。钱只有一个来源——买卖这枚币的人交的税。
+    </p>
+    <div class="hero-burnlog mono" id="heroLog" aria-live="polite"></div>
+  </div>
+  <div class="hero-strip mono">
+    <span>税币发射：Flap / Four.meme（待拍）</span><span>成交路由：PancakeSwap</span><span>地块二级：Element + 站内挂单板</span><span>分账合约：无 owner 提款口</span><span>全部数字均为演示数据</span>
+  </div>
+</section>
+
+<!-- §02 这一分钟 -->
+<section class="s-round" id="s2">
+  <div class="sec-head">
+    <div class="sh-n">02</div>
+    <h2>这一分钟<br><em>怎么结</em></h2>
+    <p class="sh-note">奖池开局就定，截止点藏在最后 15 秒里。<br>晚到的燃烧不作废，记进下一分钟。</p>
+  </div>
+
+  <div class="round-grid">
+    <div class="candle">
+      <div class="cd-top mono">
+        <span>随机收盘窗 · 最后 15 秒 ≈ 33 个区块</span>
+        <span id="cdState">等待窗口开启</span>
+      </div>
+      <div class="cd-cells" id="cdCells"></div>
+      <div class="cd-legend mono">
+        <span><i class="lg lg-in"></i>已计入本分钟</span>
+        <span><i class="lg lg-cut"></i>实际截止块（分钟结束后由未来区块哈希揭晓）</span>
+        <span><i class="lg lg-roll"></i>截止之后 → 滚入下一分钟</span>
+      </div>
+      <div class="cd-explain">
+        <p>EDEN 原版的截止时间是公开的，最后一秒冲进来就能吃掉整池。这里把「真正截止」放到最后 15 秒内的某一块，分钟结束后才用之后某个区块的哈希揭晓。最后一秒进场，大约一半概率会落到下一分钟——狙击变成碰运气，也就不值得了。</p>
+        <p class="mono dim">随机源：演示用 blockhash；奖池做大以后换 VRF（待核）。</p>
+      </div>
+    </div>
+
+    <aside class="round-side">
+      <div class="rs-row">
+        <div class="rs-k mono">本分钟奖池</div>
+        <div class="rs-v num" id="rPot">—</div>
+      </div>
+      <div class="rs-row">
+        <div class="rs-k mono">已烧（计入中）</div>
+        <div class="rs-v num" id="rBurn">—</div>
+      </div>
+      <div class="rs-row">
+        <div class="rs-k mono">最低燃烧线</div>
+        <div class="minline"><div class="ml-fill" id="mlFill"></div><div class="ml-mark"></div></div>
+        <div class="rs-sub mono" id="mlText">—</div>
+      </div>
+      <div class="rs-row">
+        <div class="rs-k mono">已滚入下一分钟</div>
+        <div class="rs-v num small" id="rRoll">0</div>
+      </div>
+      <div class="bids mono" id="bids"></div>
+    </aside>
+  </div>
+
+  <div class="settle">
+    <div class="st-head mono"><span>结算记录</span><span class="demo-pill">演示数据</span></div>
+    <table class="st-table mono">
+      <thead><tr><th>分钟</th><th>奖池 BNB</th><th>计入燃烧</th><th>人数</th><th>截止</th><th>滚入下一分钟</th><th>结果</th></tr></thead>
+      <tbody id="settleBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- §03 税 -->
+<section class="s-tax" id="s3">
+  <div class="paper">
+    <div class="paper-head">
+      <div class="ph-l">
+        <div class="mono">§03 · 分账单</div>
+        <h2>钱从哪来，<br>去哪，谁拿</h2>
+      </div>
+      <div class="ph-r mono">
+        <div>NO. <span id="slipNo">000001</span></div>
+        <div>比例全部 <b>待拍</b></div>
+        <div>部署时写死 · 不可改</div>
+      </div>
+    </div>
+
+    <div class="flow">
+      <div class="fl-node"><b>买卖这枚币的人</b><span>每笔交税（例：3%，待拍）</span></div>
+      <div class="fl-arrow"><canvas id="flowCv"></canvas></div>
+      <div class="fl-node"><b>分账合约</b><span>唯一收钱入口，收到 BNB 立刻按常量拆</span></div>
+    </div>
+
+    <div class="splitbar" id="splitbar">
+      <div class="sb sb-pot" style="--w:45"><span>45%</span></div>
+      <div class="sb sb-plot" style="--w:30"><span>30%</span></div>
+      <div class="sb sb-floor" style="--w:20"><span>20%</span></div>
+      <div class="sb sb-ops" style="--w:5"><span>≤5</span></div>
+    </div>
+
+    <table class="ledger">
+      <tbody>
+        <tr><td class="lg-n">45%</td><td><b>分钟奖池</b><br>每分钟释放余额的约 2%，按燃烧占比分给这一分钟的燃烧者</td><td class="lg-acc mono" id="accPot">—</td></tr>
+        <tr><td class="lg-n">30%</td><td><b>地块池</b><br>按「地块权重 × 本小时经由该地块的燃烧量」分，每块地每小时有上限；收益记在地块上</td><td class="lg-acc mono" id="accPlot">—</td></tr>
+        <tr><td class="lg-n">20%</td><td><b>地板储备</b><br>只进不出（除了赎回）；赎回按 储备 ÷ 总供应</td><td class="lg-acc mono" id="accFloor">—</td></tr>
+        <tr><td class="lg-n">≤5%</td><td><b>运营</b><br>写死在合约和页面上</td><td class="lg-acc mono" id="accOps">—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="paper-foot">
+      <div class="pf-stamp">无增发<br>无预存返利<br>无 owner 提款口</div>
+      <p>燃烧的人得先从市场买币，买的时候本身又交一次税——烧的人越多，买盘越多，税越多，奖池越大。<b>反过来也一样：没人买卖，奖池就停。</b>这里不承诺收益，也不保本。</p>
+      <p class="mono small">对照：原版同类项目的分账合约里，运营一方实际拿走 53.85%，宣传口径是「手续费进奖池」。</p>
+    </div>
+    <div class="paper-tear"></div>
+  </div>
+
+  <div class="tax-side">
+    <div class="ts-label mono">实时入账（演示）</div>
+    <div class="taxfeed mono" id="taxFeed"></div>
+  </div>
+</section>
+
+<!-- §04 算一下 -->
+<section class="s-sim" id="s4">
+  <div class="sec-head">
+    <div class="sh-n">04</div>
+    <h2>烧多少，<br><em>占多少</em></h2>
+    <p class="sh-note">拖一下，看看在当前演示盘面下，你这一笔大概占这一分钟的几成。只是算术，不是预期。</p>
+  </div>
+
+  <div class="sim-grid">
+    <div class="sim-in">
+      <label class="field">
+        <span class="mono">投入</span>
+        <div class="field-row">
+          <input type="number" id="simBnb" value="0.05" min="0.001" step="0.005" inputmode="decimal">
+          <em>BNB</em>
+        </div>
+        <input type="range" id="simBnbR" min="0.001" max="1" step="0.001" value="0.05">
+        <small class="mono" id="simTokens">≈ — 枚（按演示价，已扣买入税）</small>
+      </label>
+
+      <label class="field">
+        <span class="mono">在第几秒进场</span>
+        <div class="field-row"><output id="simSecO" class="num">30</output><em>s</em></div>
+        <input type="range" id="simSec" min="0" max="59.9" step="0.1" value="30">
+        <div class="sec-scale mono"><span>0</span><span class="w">45 ↓ 随机窗</span><span>60</span></div>
+      </label>
+
+      <div class="mode mono">
+        <span>路径</span>
+        <button class="chip on" data-mode="wallet">币安钱包 · 一笔买+烧</button>
+        <button class="chip" data-mode="agent">Agent 限额授权</button>
+      </div>
+    </div>
+
+    <div class="sim-out">
+      <div class="so-big">
+        <div class="mono k">计入本分钟的概率</div>
+        <div class="num v" id="soProb">100%</div>
+        <div class="prob-bar"><i id="soProbBar"></i></div>
+      </div>
+      <dl class="so-list">
+        <div><dt class="mono">计入后你的占比</dt><dd class="num" id="soShare">—</dd></div>
+        <div><dt class="mono">按演示奖池折算</dt><dd class="num" id="soPay">—</dd></div>
+        <div><dt class="mono">本分钟是否过最低线</dt><dd id="soMin">—</dd></div>
+        <div><dt class="mono">落到下一分钟时</dt><dd id="soRoll">—</dd></div>
+      </dl>
+      <p class="so-note" id="soNote"></p>
+      <button class="btn-burn" id="btnSimBurn"><span>演示烧一笔</span><i class="mono">不会发起任何交易</i></button>
+    </div>
+  </div>
+</section>
+
+<!-- §05 地块 -->
+<section class="s-plots" id="s5">
+  <div class="plots-head">
+    <div class="sh-n">05</div>
+    <h2>地块</h2>
+    <p>创世期前 30 分钟，每分钟放出 110 块地，共 3,300 块。地块有底价：某分钟烧得不够，只按「燃烧量 ÷ 底价」发，剩下的滚到后面。收益记在地块上，转手就归新主人。</p>
+    <div class="plots-legend mono">
+      <span><i class="t1"></i>一等 ×3（前 K 名与倍数待拍）</span>
+      <span><i class="t2"></i>二等 ×2</span>
+      <span><i class="t3"></i>三等 ×1.5</span>
+      <span><i class="t0"></i>普通 ×1</span>
+      <span><i class="tx"></i>滚存未发</span><span>· 一等/二等/三等 = 该分钟燃烧量前三名（演示）</span>
+    </div>
+  </div>
+  <div class="plots-grid">
+    <div class="map-wrap">
+      <canvas id="plotMap"></canvas>
+      <div class="map-axis mono"><span>每一行 = 创世 1 分钟（110 块）</span><span>竖黑线分隔不同燃烧者 · 共 3,300 块</span></div>
+    </div>
+    <aside class="plot-card" id="plotCard">
+      <div class="pc-empty mono">点一块地看详情 ←</div>
+    </aside>
+  </div>
+  <div class="market mono">
+    <div class="mk-title">站内挂单板 <span class="demo-pill">演示数据</span> <small>成交抽 1% 进分钟奖池 · 也可在 Element 交易</small></div>
+    <div class="mk-rows" id="mkRows"></div>
+  </div>
+</section>
+
+<!-- §06 地板 -->
+<section class="s-floor" id="s6">
+  <div class="floor-grid">
+    <div class="floor-text">
+      <div class="sh-n">06</div>
+      <h2>地板<br><em>只会往上走</em><br>但不托市价</h2>
+      <div class="formula">
+        <span>赎回价</span><b>=</b><span class="frac"><i>储备 BNB</i><i>总供应</i></span>
+      </div>
+      <p>分母用<b>总供应</b>，不扣池子和合约里的币。税进来，储备变多；有人烧，总供应变少；有人赎回，按当时价格拿走自己那份，再扣 1% 留在储备里——没有哪一个动作能让这个数变小。</p>
+      <p class="warn">它的意思是「如果所有币都来赎，每个币能拿回多少 BNB」。它不是市价，也不保证市价。早期它会远低于市价，那时候它只是一个公开的数字。</p>
+      <div class="floor-stats mono">
+        <div><span>储备</span><b id="fRes">—</b></div>
+        <div><span>总供应</span><b id="fSup">—</b></div>
+        <div><span>地板价</span><b id="fPx">—</b></div>
+        <div><span>地板 / 演示市价</span><b id="fRatio">—</b></div>
+      </div>
+      <div class="redeem">
+        <label class="mono">试算赎回 <input id="rdAmt" type="number" value="1000000" step="100000"> 枚</label>
+        <div class="mono" id="rdOut">—</div>
+      </div>
+    </div>
+    <div class="floor-chart">
+      <canvas id="floorCv"></canvas>
+      <div class="fc-legend mono"><span><i class="gold"></i>地板价（单调）</span><span><i class="dash"></i>演示市价（会涨也会跌）</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- §07 授权 -->
+<section class="s-agent" id="s7">
+  <div class="agent-grid">
+    <div class="agent-copy">
+      <div class="sh-n">07</div>
+      <h2>币安钱包，<br>和一张只能烧的授权单</h2>
+      <p>普通人：币安钱包里一笔交易做完「BNB → 经 PancakeSwap 买入 → 烧」，同一笔里带最小成交量，防夹。</p>
+      <p>想挂长期策略的：可以给币安 Agent 一张授权单——<b>只能调用烧</b>，每分钟有限额，<b>没有提款权限</b>，随时撤销。它不是收费身份，只是一个入口。是否开放，待拍。</p>
+      <p class="mono dim small">本站不会请求私钥、助记词或任何签名。</p>
+    </div>
+    <div class="slip" id="slip">
+      <div class="slip-h mono"><span>授权单 · 演示</span><span id="slipState">未签发</span></div>
+      <dl class="mono">
+        <div><dt>可调用</dt><dd>burn()</dd></div>
+        <div><dt>不可调用</dt><dd>transfer · withdraw · approve 其他合约</dd></div>
+        <div><dt>每分钟上限</dt><dd><input id="agCap" type="range" min="0.01" max="0.5" step="0.01" value="0.05"> <b id="agCapV">0.05</b> BNB</dd></div>
+        <div><dt>有效期</dt><dd><select id="agTtl"><option>24 小时</option><option selected>7 天</option><option>30 天</option></select></dd></div>
+        <div><dt>策略模板</dt><dd><select id="agTpl"><option>只在奖池 ≥ 中位数时烧</option><option>只在窗口开启前烧（避开滚存）</option><option>固定每分钟小额</option></select></dd></div>
+      </dl>
+      <button class="btn-slip" id="btnSlip">演示签发</button>
+      <div class="slip-log mono" id="slipLog"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 待拍 -->
+<section class="s-todo">
+  <div class="todo-l"><div class="sh-n">08</div><h2>还没拍板的</h2></div>
+  <ol class="todo mono">
+    <li>税率 1 / 3 / 5 / 10%，以及 45 / 30 / 20 / ≤5 的分账</li>
+    <li>发射台：Flap 还是 Four.meme；税收地址能否填合约、到账是 BNB 还是代币（需测试币验证）</li>
+    <li>分钟长度、随机收盘窗（建议 15 秒）、释放率（建议 2%）</li>
+    <li>最低燃烧线、地块底价、创世分钟数与每分钟地块数、总上限</li>
+    <li>等级加成：前 K 名与倍数；地块每小时限额</li>
+    <li>地板赎回扣留（建议 1%）；站内挂单板抽成</li>
+    <li>是否开放 Agent 限额授权；随机源 blockhash 还是 VRF</li>
+    <li>名字</li>
+  </ol>
+</section>
+
+</main>
+
+<footer class="foot mono">
+  <div>烬账 ASHLEDGER 为暂名 · 前端演示 · 未部署任何合约 · 页面上所有区块、地址、金额、价格都是浏览器里随机生成的演示数据</div>
+  <div>不连接钱包 · 不请求私钥/助记词 · 不构成任何收益承诺 · 与币安 / BNB Chain 官方无关</div>
+</footer>
+
+<div class="toast mono" id="toast" role="status"></div>
+<script src="app.js"></script>
+</body>
+</html>

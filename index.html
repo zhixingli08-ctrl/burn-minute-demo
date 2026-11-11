@@ -20,6 +20,7 @@
   <div class="rail-l">
     <span class="mark">烬<i>账</i></span>
     <span class="tag">ASHLEDGER · 暂名</span>
+    <a href="#s0" class="nav-walk">看一局完整演示</a>
   </div>
   <div class="rail-m mono" id="railTicker">
     <span>BSC</span><span>#<b id="rBlock">—</b></span><span>出块 0.45s</span><span>gas <b id="rGas">—</b> gwei</span><span class="demo-pill">演示数据</span>
@@ -53,14 +54,86 @@
       <div class="hp-sub mono">= 分钟池余额 <b id="hPool">—</b> × 2% 释放 · 分钟内新进的税算到后面</div>
     </div>
     <div class="chain mono" id="chain" aria-hidden="true"></div>
-    <p class="hero-lede">
-      这里只有一个动作：<b>烧</b>。<br>
-      在币安钱包里一笔完成「BNB → 买入 → 烧掉」。每分钟结算一次，按你烧掉的占比，分这一分钟开局就公布的 BNB。钱只有一个来源——买卖这枚币的人交的税。
-    </p>
+    <div class="hero-lede">
+      <p>
+        这里只有一个动作：<b>烧</b>。<br>
+        在币安钱包里一笔完成「BNB → 买入 → 烧掉」。每分钟结算一次，按你烧掉的占比，分这一分钟开局就公布的 BNB。钱只有一个来源——买卖这枚币的人交的税。
+      </p>
+      <a class="hero-walk" href="#s0"><em>00</em>看一局完整演示<i>从买到领奖 →</i></a>
+    </div>
     <div class="hero-burnlog mono" id="heroLog" aria-live="polite"></div>
   </div>
   <div class="hero-strip mono">
     <span>税币发射：Flap / Four.meme（待拍）</span><span>成交路由：PancakeSwap</span><span>地块二级：Element + 站内挂单板</span><span>分账合约：无 owner 提款口</span><span>全部数字均为演示数据</span>
+  </div>
+</section>
+
+<!-- §00 一局完整演示 -->
+<section class="s-walk" id="s0">
+  <div class="sec-head">
+    <div class="sh-n">00</div>
+    <h2>看一局<br><em>完整演示</em></h2>
+    <p class="sh-note">把第 1203 分钟从开局走到领奖，数字全部当场算，彼此对得上。<br>全部为演示数据，不会发起任何交易。</p>
+  </div>
+
+  <div class="wk-ctrl">
+    <div class="wk-btns">
+      <button type="button" class="wk-btn wk-btn-play" id="wkPlay">开演</button>
+      <button type="button" class="wk-btn" id="wkPause" disabled>暂停</button>
+      <button type="button" class="wk-btn" id="wkStep">下一步</button>
+      <button type="button" class="wk-btn" id="wkReplay">重来</button>
+    </div>
+    <div class="wk-speed mono" role="group" aria-label="倍速">
+      <span>倍速</span>
+      <button type="button" class="chip on" data-wk-spd="1">1×</button>
+      <button type="button" class="chip" data-wk-spd="3">3×</button>
+    </div>
+    <span class="demo-pill">演示数据</span>
+    <div class="wk-steps mono" id="wkSteps" aria-hidden="true"></div>
+  </div>
+
+  <div class="wk-stage">
+    <div class="wk-board">
+      <div class="wk-clock">
+        <div class="wk-clock-lab mono">第 <b id="wkMin">1203</b> 分钟 · 名义剩余</div>
+        <div class="wk-clock-num" id="wkClockNum"><span id="wkSec">60</span><small>.<span id="wkMs">00</span></small></div>
+        <div class="wk-bar"><i id="wkBar"></i><em class="wk-window" title="随机收盘窗口：最后 15 秒"></em></div>
+        <div class="wk-bar-lab mono"><span>0s</span><span>45s · 随机收盘窗</span><span>60s</span></div>
+      </div>
+
+      <div class="wk-kpis">
+        <div class="wk-kpi">
+          <div class="mono k">本分钟奖池 · 开局已定</div>
+          <div class="num v" id="wkPot">—</div>
+          <div class="mono s" id="wkPotSub">= 分钟池余额 × 2% 释放</div>
+        </div>
+        <div class="wk-kpi">
+          <div class="mono k" id="wkBurnLab">已计入燃烧</div>
+          <div class="num v sm" id="wkBurned">0</div>
+          <div class="minline wk-ml"><div class="ml-fill" id="wkMl"></div><div class="ml-mark"></div></div>
+          <div class="mono s" id="wkMlText">最低燃烧线 —</div>
+        </div>
+        <div class="wk-kpi wk-worth" id="wkWorth">
+          <div class="mono k">奖池 ÷ 已计入 · 每 10 万枚</div>
+          <div class="num v sm" id="wkRatio">—</div>
+          <div class="mono s" id="wkWorthSub">进场后盯这个数，跟买入成本比</div>
+        </div>
+      </div>
+
+      <div class="wk-cells" id="wkCells" hidden></div>
+      <div class="wk-cells-lab mono" id="wkCellsLab" hidden>随机收盘窗 · 33 块</div>
+
+      <div class="wk-bids-h mono">本分钟燃烧名单</div>
+      <div class="wk-bids mono" id="wkBids">
+        <div class="wk-bids-empty" id="wkBidsEmpty">还没有人烧</div>
+      </div>
+    </div>
+
+    <aside class="wk-narr">
+      <div class="wk-cap-k mono">旁白 <span id="wkStepLab">未开演</span></div>
+      <p class="wk-cap" id="wkCap" aria-live="polite"></p>
+      <div class="wk-pane" id="wkPane"></div>
+    </aside>
   </div>
 </section>
 
@@ -145,23 +218,21 @@
     <div class="splitbar" id="splitbar">
       <div class="sb sb-pot" style="--w:45"><span>45%</span></div>
       <div class="sb sb-plot" style="--w:30"><span>30%</span></div>
-      <div class="sb sb-floor" style="--w:20"><span>20%</span></div>
-      <div class="sb sb-ops" style="--w:5"><span>≤5</span></div>
+      <div class="sb sb-floor" style="--w:25"><span>25%</span></div>
     </div>
 
     <table class="ledger">
       <tbody>
         <tr><td class="lg-n">45%</td><td><b>分钟奖池</b><br>每分钟释放余额的约 2%，按燃烧占比分给这一分钟的燃烧者</td><td class="lg-acc mono" id="accPot">—</td></tr>
         <tr><td class="lg-n">30%</td><td><b>地块池</b><br>按「地块权重 × 本小时经由该地块的燃烧量」分，每块地每小时有上限；收益记在地块上</td><td class="lg-acc mono" id="accPlot">—</td></tr>
-        <tr><td class="lg-n">20%</td><td><b>地板储备</b><br>只进不出（除了赎回）；赎回按 储备 ÷ 总供应</td><td class="lg-acc mono" id="accFloor">—</td></tr>
-        <tr><td class="lg-n">≤5%</td><td><b>运营</b><br>写死在合约和页面上</td><td class="lg-acc mono" id="accOps">—</td></tr>
+        <tr><td class="lg-n">25%</td><td><b>地板储备</b><br>只进不出（除了赎回）；赎回按 储备 ÷ 总供应</td><td class="lg-acc mono" id="accFloor">—</td></tr>
       </tbody>
     </table>
 
     <div class="paper-foot">
       <div class="pf-stamp">无增发<br>无预存返利<br>无 owner 提款口</div>
       <p>燃烧的人得先从市场买币，买的时候本身又交一次税——烧的人越多，买盘越多，税越多，奖池越大。<b>反过来也一样：没人买卖，奖池就停。</b>这里不承诺收益，也不保本。</p>
-      <p class="mono small">对照：原版同类项目的分账合约里，运营一方实际拿走 53.85%，宣传口径是「手续费进奖池」。</p>
+      <p class="mono small">对照：原版同类项目的分账合约里，运营一方实际拿走 53.85%，宣传口径是「手续费进奖池」。我们 0 抽成。</p>
     </div>
     <div class="paper-tear"></div>
   </div>
@@ -311,7 +382,7 @@
 <section class="s-todo">
   <div class="todo-l"><div class="sh-n">08</div><h2>还没拍板的</h2></div>
   <ol class="todo mono">
-    <li>税率 1 / 3 / 5 / 10%，以及 45 / 30 / 20 / ≤5 的分账</li>
+    <li>税率 1 / 3 / 5 / 10%，以及 45 / 30 / 25 的分账</li>
     <li>发射台：Flap 还是 Four.meme；税收地址能否填合约、到账是 BNB 还是代币（需测试币验证）</li>
     <li>分钟长度、随机收盘窗（建议 15 秒）、释放率（建议 2%）</li>
     <li>最低燃烧线、地块底价、创世分钟数与每分钟地块数、总上限</li>
